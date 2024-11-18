@@ -2,7 +2,7 @@ from flask import Flask, flash, redirect, render_template, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import UserMixin, login_user, LoginManager, login_required, logout_user, current_user
-from forms import RegisterForm
+from forms import LoginForm, RegisterForm
 from werkzeug.security import check_password_hash, generate_password_hash
 from datetime import datetime   
 
@@ -12,6 +12,14 @@ app.config['SECRET_KEY'] = "pogi si owen"
 
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
+
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
 
 ''' 
 -----------------------------------------------
@@ -41,13 +49,41 @@ def register():
                            username=username, 
                            our_users=our_users)
 
+@app.route("/login", methods=['GET', 'POST'])
+def login():
+    login_form = LoginForm()
+    if login_form.validate_on_submit():
+        user = User.query.filter_by(username=login_form.username.data).first()
+        if user:
+            if check_password_hash(user.password_hash, login_form.password.data):
+                login_user(user)
+                flash("Login Successfully!")
+                return redirect(url_for('dashboard'))
+            else:
+                flash("Wrong password! - Try again")
+        else:
+            flash("That User doesn't exist! Try again")
+    return render_template('login.html', login_form=login_form)
+
+@app.route("/logout", methods=['GET', 'POST'])
+@login_required
+def logout():
+    logout_user()
+    flash("You have been logged out")
+    return redirect(url_for('login'))
+
+app.route("/dashboard")
+@login_required
+def dashboard():
+    return render_template('dashboard.html')
+
 ''' 
 -----------------------------------------------
                Models Section
 -----------------------------------------------
 '''
 
-class User(db.Model):
+class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(200), nullable=False, unique=True)
     password_hash = db.Column(db.String(120), nullable=False)
@@ -72,7 +108,7 @@ class Goal(db.Model):
     goal_name = db.Column(db.String(100), nullable=False)
     target_amount = db.Column(db.Float, nullable=False)
     saved_amount = db.Column(db.Float, nullable=False, default=0)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Links to the User model
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False) 
     date_created = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
     def __repr__(self):

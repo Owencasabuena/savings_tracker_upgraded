@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="shadow p-3 mb-5 bg-body rounded align-items-center justify-content-center">
+        <h1 class="text-center"> Login</h1>
+        <form method="POST" action="{{ url_for('login') }}" autocomplete="off">
+            {{ login_form.hidden_tag() }}
+            
+            {{ login_form.username.label(class="form-label") }}
+            {{ login_form.username(class="form-control") }}
+            
+            {{ login_form.password.label(class="form-label") }}
+            {{ login_form.password(class="form-control") }}
+            <br>
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            {{ login_form.submit(class="btn btn-secondary") }}
+        </form>
+    </div>
+{% endblock %}
